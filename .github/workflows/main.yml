@@ -113,6 +113,25 @@ jobs:
       #     docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
       #     echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
+      - name: Show AWS identity & region
+        run: |
+          aws sts get-caller-identity
+          echo "Region: ${{ env.AWS_REGION }}"
+
+      - name: Validate ECS cluster & service
+        env:
+          CLUSTER: ${{ env.ECS_CLUSTER }}          # or paste the ARN you plan to use
+          SERVICE: ${{ env.ECS_SERVICE }}
+          REGION:  ${{ env.AWS_REGION }}
+        run: |
+          echo "Looking for cluster '$CLUSTER' in $REGION"
+          aws ecs list-clusters --region "$REGION"
+          echo "Describe cluster:"
+          aws ecs describe-clusters --clusters "$CLUSTER" --region "$REGION"
+          echo "Describe service:"
+          aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --region "$REGION"
+
+
       - name: Fill in the new image ID in the Amazon ECS task definition
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
@@ -125,6 +144,6 @@ jobs:
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: my-service
-          cluster: my-cluster
+          service: arn:aws:ecs:us-east-1:006543401973:service/my-cluster/my-service
+          cluster: arn:aws:ecs:us-east-1:006543401973:cluster/my-cluster
           wait-for-service-stability: true
